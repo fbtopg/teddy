@@ -118,7 +118,6 @@
 
         h1 {
             font-size: 10vw;
-            max-font-size: 72px;
             color: #ffeaa7;
             text-shadow: 5px 5px 0px #d63031, 0 0 30px rgba(255,234,167,0.5);
             margin-bottom: 20px;
@@ -1160,7 +1159,7 @@
                 let currentX = this.x;
                 let currentY = this.y;
                 
-                this.targets.forEach(target => {
+                this.targets.forEach((target) => {
                     const steps = 5;
                     for (let i = 1; i <= steps; i++) {
                         const t = i / steps;
@@ -1170,7 +1169,7 @@
                     }
                     currentX = target.x;
                     currentY = target.y;
-                }
+                });
             }
 
             update() {
