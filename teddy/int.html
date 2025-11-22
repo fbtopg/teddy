@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Teddy's Toybox Trouble</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #2c3e50;
+            font-family: 'Fredoka One', cursive;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: none;
+            touch-action: none; 
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, #ffeaa7 0%, #fab1a0 100%);
+            transition: filter 0.3s;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            color: #d63031;
+            text-shadow: 2px 2px 0px #fff;
+            width: 100%;
+        }
+
+        .score-container, .lives-container, .level-container {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 8px 15px;
+            border-radius: 15px;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 18px;
+        }
+
+        @media (min-width: 600px) {
+            .score-container, .lives-container, .level-container {
+                font-size: 24px;
+                padding: 10px 20px;
+            }
+        }
+
+        #startScreen, #gameOverScreen, #levelScreen, #upgradeScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 10;
+            pointer-events: auto;
+            cursor: default;
+        }
+
+        h1 {
+            font-size: 8vw;
+            max-font-size: 60px;
+            color: #ffeaa7;
+            text-shadow: 4px 4px 0px #d63031;
+            margin-bottom: 10px;
+            text-align: center;
+            line-height: 1;
+        }
+        @media (min-width: 600px) { h1 { font-size: 60px; } }
+
+        p {
+            font-size: 4vw;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+            padding: 0 20px;
+        }
+        @media (min-width: 600px) { p { font-size: 24px; } }
+
+        .btn {
+            background: #0984e3;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Fredoka One', cursive;
+            box-shadow: 0 6px 0 #0056b3;
+            transition: transform 0.1s, box-shadow 0.1s;
+            margin-top: 10px;
+            pointer-events: auto;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #0056b3;
+        }
+
+        /* Upgrade Cards Styling */
+        .card-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .card {
+            background: #fff;
+            color: #2c3e50;
+            width: 140px;
+            padding: 20px;
+            border-radius: 15px;
+            border: 4px solid #0984e3;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 6px 0 #0056b3;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            background: #f1f2f6;
+        }
+
+        .card-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            color: #0984e3;
+            margin-bottom: 5px;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: #636e72;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #cursor {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+        
+        .crosshair-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
+        }
+        
+        #effect-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            display: none;
+            background: rgba(255, 215, 0, 0.2);
+            mix-blend-mode: overlay;
+        }
+
+        /* Boss Bar Container */
+        #boss-hud {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 400px;
+            display: none; /* Hidden by default */
+        }
+        .boss-label {
+            color: white;
+            text-shadow: 2px 2px 0 #000;
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .hp-bar-bg {
+            width: 100%;
+            height: 20px;
+            background: #2c3e50;
+            border: 3px solid white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .hp-bar-fill {
+            width: 100%;
+            height: 100%;
+            background: #d63031;
+            transition: width 0.2s;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="cursor">
+        <svg class="crosshair-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="40" stroke="#d63031" stroke-width="4"/>
+            <circle cx="50" cy="50" r="4" fill="#d63031"/>
+            <line x1="50" y1="10" x2="50" y2="30" stroke="#d63031" stroke-width="4"/>
+            <line x1="50" y1="70" x2="50" y2="90" stroke="#d63031" stroke-width="4"/>
+            <line x1="10" y1="50" x2="30" y2="50" stroke="#d63031" stroke-width="4"/>
+            <line x1="70" y1="50" x2="90" y2="50" stroke="#d63031" stroke-width="4"/>
+        </svg>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="effect-overlay"></div>
+
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="score-container">Score: <span id="scoreEl">0</span></div>
+            <div class="level-container">Stage: <span id="levelEl">1</span></div>
+            <div class="lives-container">Lives: <span id="livesEl">❤❤❤</span></div>
+        </div>
+        <!-- Boss Health Bar -->
+        <div id="boss-hud">
+            <div class="boss-label">BOSS BEAR</div>
+            <div class="hp-bar-bg">
+                <div class="hp-bar-fill" id="bossHpFill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="startScreen">
+        <h1>Teddy's Toybox Trouble</h1>
+        <p>The toys have gone rogue!<br>Defeat the Bosses & Upgrade your gear.</p>
+        <button class="btn" onclick="startGame()">PLAY</button>
+        <p style="font-size: 18px; margin-top: 20px; color: #ffeaa7;">High Score: <span id="highScoreStart">0</span></p>
+    </div>
+
+    <div id="levelScreen" class="hidden">
+        <h1 id="levelTitle">Stage 2</h1>
+        <p id="levelDesc">Faster bears incoming!</p>
+        <div style="font-size: 40px; margin-bottom: 20px;">🧸</div>
+    </div>
+
+    <div id="upgradeScreen" class="hidden">
+        <h1>Level Cleared!</h1>
+        <p>Choose an Upgrade:</p>
+        <div class="card-container" id="cardContainer">
+            <!-- Cards injected by JS -->
+        </div>
+    </div>
+
+    <div id="gameOverScreen" class="hidden">
+        <h1>GAME OVER</h1>
+        <p>The bears escaped!</p>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button class="btn" onclick="resetGame()">TRY AGAIN</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.getElementById('cursor');
+        const effectOverlay = document.getElementById('effect-overlay');
+        
+        const scoreEl = document.getElementById('scoreEl');
+        const levelEl = document.getElementById('levelEl');
+        const livesEl = document.getElementById('livesEl');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const levelScreen = document.getElementById('levelScreen');
+        const upgradeScreen = document.getElementById('upgradeScreen');
+        const cardContainer = document.getElementById('cardContainer');
+        const levelTitle = document.getElementById('levelTitle');
+        const levelDesc = document.getElementById('levelDesc');
+        const finalScoreEl = document.getElementById('finalScore');
+        const highScoreEl = document.getElementById('highScoreStart');
+        const bossHud = document.getElementById('boss-hud');
+        const bossHpFill = document.getElementById('bossHpFill');
+
+        // Game State Enum
+        const STATE = {
+            MENU: 0,
+            PLAYING: 1,
+            BOSS_FIGHT: 2,
+            UPGRADE: 3,
+            GAMEOVER: 4
+        };
+
+        let currentState = STATE.MENU;
+        let animationId;
+        let score = 0;
+        let highScore = localStorage.getItem('teddy_high_score') || 0;
+        let level = 1;
+        let lives = 3;
+        
+        // Entities
+        let bears = [];
+        let items = []; 
+        let particles = [];
+        let turrets = [];
+        let bullets = [];
+        
+        // Timers
+        let spawnTimer = 0;
+        let itemSpawnTimer = 0;
+        let scoreThreshold = 0;
+        
+        // Power-up States
+        let timeScale = 1.0;
+        let honeyTimer = 0;
+
+        // Player Stats (Upgradable)
+        let playerStats = {
+            damage: 1,          // Click damage
+            shieldChance: 0,    // % Chance to ignore life loss (0-100)
+            turretDuration: 600 // Frames (default 10 sec)
+        };
+
+        highScoreEl.innerText = highScore;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        /**
+         * INPUT HANDLING
+         */
+        function handleInput(x, y) {
+            if (currentState !== STATE.PLAYING && currentState !== STATE.BOSS_FIGHT) return;
+            
+            // Visuals
+            cursor.style.left = x + 'px';
+            cursor.style.top = y + 'px';
+            const svg = cursor.querySelector('svg');
+            svg.style.transform = 'scale(0.8)';
+            setTimeout(() => svg.style.transform = 'scale(1)', 100);
+            createParticles(x, y, 5, '#d63031');
+            
+            checkHit(x, y, playerStats.damage);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if(currentState === STATE.PLAYING || currentState === STATE.BOSS_FIGHT) {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            }
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            handleInput(e.clientX, e.clientY);
+        });
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('.card')) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            handleInput(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        /**
+         * CLASSES
+         */
+
+        class GameItem {
+            constructor() {
+                this.radius = 30;
+                this.direction = Math.random() > 0.5 ? 1 : -1;
+                this.x = this.direction === 1 ? -this.radius * 2 : canvas.width + this.radius * 2;
+                this.y = Math.random() * (canvas.height - 200) + 100;
+                this.speedX = (Math.random() * 1.5 + 1) * this.direction;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.wobble = 0;
+                
+                const rand = Math.random();
+                if (rand < 0.3) {
+                    this.type = 'honey'; 
+                    this.color = '#f39c12';
+                    this.icon = '🍯';
+                } else if (rand < 0.5) {
+                    this.type = 'bomb';
+                    this.color = '#e74c3c';
+                    this.icon = '🧨';
+                } else if (rand < 0.7) {
+                    this.type = 'turret'; // NEW: Turret Item
+                    this.color = '#3498db';
+                    this.icon = '🤖';
+                } else {
+                    this.type = 'heart';
+                    this.color = '#ff7675';
+                    this.icon = '💖';
+                }
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY + Math.sin(this.wobble) * 0.5;
+                this.wobble += 0.05;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fill();
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.font = "30px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(this.icon, 0, 2);
+                ctx.restore();
+            }
+        }
+
+        class Turret {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.life = playerStats.turretDuration;
+                this.cooldown = 0;
+                this.range = 400;
+            }
+
+            update() {
+                this.life--;
+                if (this.cooldown > 0) this.cooldown--;
+
+                // Auto Fire Logic
+                if (this.cooldown <= 0 && bears.length > 0) {
+                    // Find closest bear
+                    let closest = null;
+                    let minDist = Infinity;
+                    bears.forEach(b => {
+                        // Ignore off-screen
+                        if (b.x < 0 || b.x > canvas.width) return;
+                        const dist = Math.hypot(b.x - this.x, b.y - this.y);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closest = b;
+                        }
+                    });
+
+                    if (closest) {
+                        // Fire bullet
+                        bullets.push(new Bullet(this.x, this.y - 20, closest));
+                        this.cooldown = 30; // Fire rate
+                    }
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Base
+                ctx.fillStyle = '#7f8c8d';
+                ctx.beginPath();
+                ctx.ellipse(0, 10, 20, 10, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Body
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(-15, -20, 30, 30);
+                
+                // Eyes (Robotic)
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(-10, -15, 8, 8);
+                ctx.fillRect(2, -15, 8, 8);
+
+                // Life Bar
+                const lifePct = this.life / playerStats.turretDuration;
+                ctx.fillStyle = 'lime';
+                ctx.fillRect(-15, -30, 30 * lifePct, 4);
+
+                ctx.restore();
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, target) {
+                this.x = x;
+                this.y = y;
+                this.speed = 12;
+                this.target = target;
+                
+                // Calculate angle to target at spawn
+                const angle = Math.atan2((target.y - 10) - y, target.x - x);
+                this.vx = Math.cos(angle) * this.speed;
+                this.vy = Math.sin(angle) * this.speed;
+                this.active = true;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Basic boundary check
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.active = false;
+                }
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 6, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        class Bear {
+            constructor(stage, isBoss = false) {
+                this.isBoss = isBoss;
+                const scaleFactor = Math.min(canvas.width, canvas.height) / 800; 
+                
+                if (isBoss) {
+                    this.radius = 80 * scaleFactor;
+                    this.hp = 50 + (stage * 30); // Much higher HP
+                    this.maxHp = this.hp;
+                    this.points = 1000;
+                    this.speedX = 2 * (Math.random() > 0.5 ? 1 : -1);
+                    this.type = 'boss';
+                    this.color = '#2d3436'; // Dark
+                    this.earColor = '#000';
+                } else {
+                    // Normal Setup
+                    this.radius = (35 + Math.random() * 15) * (Math.max(0.8, scaleFactor));
+                    this.hp = 1;
+                    this.type = 'normal';
+                    this.color = '#8d6e63';
+                    this.earColor = '#5d4037';
+                    
+                    // Setup Types
+                    const rand = Math.random();
+                    if (rand < 0.05) {
+                        this.type = 'gold'; this.color = '#f1c40f'; this.earColor = '#f39c12'; this.points = 50;
+                    } else if (stage > 1 && rand < 0.2) {
+                        this.type = 'fast'; this.radius *= 0.8; this.color = '#e056fd'; this.earColor = '#be2edd'; this.points = 20;
+                    } else if (stage > 2 && rand < 0.4) {
+                        this.type = 'tank'; this.radius *= 1.4; this.hp = 3; this.color = '#2c3e50'; this.earColor = '#1a252f'; this.points = 30;
+                    } else {
+                        this.points = 10;
+                    }
+
+                    // Speed
+                    const baseSpeed = 2 + (stage * 1.5); 
+                    const speedScale = canvas.width / 1000;
+                    this.speedX = (Math.random() * 2 + baseSpeed) * (Math.random() > 0.5 ? 1 : -1) * Math.max(0.5, speedScale);
+                    if (this.type === 'gold') this.speedX *= 1.5;
+                    if (this.type === 'fast') this.speedX *= 1.8;
+                    if (this.type === 'tank') this.speedX *= 0.7;
+                }
+
+                this.y = Math.random() * (canvas.height - 200) + 100;
+                this.direction = this.speedX > 0 ? 1 : -1;
+                
+                if (isBoss) {
+                    this.x = canvas.width / 2; // Spawn in middle
+                    this.y = -150; // Above screen, drop down
+                } else {
+                    this.x = this.direction === 1 ? -this.radius * 2 : canvas.width + this.radius * 2;
+                }
+
+                this.speedY = (Math.random() - 0.5) * (stage * 0.5);
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = 0.05 + (stage * 0.01);
+                this.hitFlash = 0;
+                this.state = 'entering'; // for boss
+            }
+
+            update() {
+                if (this.isBoss) {
+                    // Boss Logic
+                    if (this.state === 'entering') {
+                        this.y += 3;
+                        if (this.y > 150) this.state = 'fighting';
+                    } else {
+                        this.x += this.speedX;
+                        // Bounce off walls
+                        if (this.x < this.radius || this.x > canvas.width - this.radius) {
+                            this.speedX *= -1;
+                        }
+                        this.y += Math.sin(this.wobble) * 2;
+                        this.wobble += 0.02;
+                    }
+                    
+                    // Update HUD
+                    bossHpFill.style.width = `${(this.hp / this.maxHp) * 100}%`;
+
+                } else {
+                    // Normal Bear Logic
+                    this.x += this.speedX * timeScale;
+                    this.y += (this.speedY + Math.sin(this.wobble) * (level * 0.5)) * timeScale;
+                    this.wobble += this.wobbleSpeed * timeScale;
+                }
+
+                if (this.hitFlash > 0) this.hitFlash--;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                const bob = Math.sin(this.wobble) * 5;
+                ctx.translate(0, bob);
+
+                const mainColor = this.hitFlash > 0 ? '#fff' : this.color;
+                
+                // Draw Bear (simplified based on previous code)
+                // Ears
+                ctx.fillStyle = this.hitFlash > 0 ? '#fff' : this.earColor;
+                ctx.beginPath(); ctx.arc(-this.radius*0.7, -this.radius*0.7, this.radius*0.35, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.radius*0.7, -this.radius*0.7, this.radius*0.35, 0, Math.PI*2); ctx.fill();
+                
+                // Head
+                ctx.fillStyle = mainColor;
+                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+                
+                // Face
+                ctx.fillStyle = '#ffeaa7';
+                ctx.beginPath(); ctx.ellipse(0, this.radius*0.2, this.radius*0.4, this.radius*0.3, 0, 0, Math.PI*2); ctx.fill();
+                
+                // Eyes & Nose
+                ctx.fillStyle = '#2d3436';
+                ctx.beginPath(); ctx.arc(0, this.radius*0.1, this.radius*0.12, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-this.radius*0.35, -this.radius*0.2, this.radius*0.1, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.radius*0.35, -this.radius*0.2, this.radius*0.1, 0, Math.PI*2); ctx.fill();
+
+                // Angry Brows for Boss/Tank
+                if (this.type === 'tank' || this.isBoss) {
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = this.isBoss ? 6 : 3;
+                    ctx.beginPath(); ctx.moveTo(-this.radius*0.5, -this.radius*0.4); ctx.lineTo(-this.radius*0.2, -this.radius*0.3); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(this.radius*0.5, -this.radius*0.4); ctx.lineTo(this.radius*0.2, -this.radius*0.3); ctx.stroke();
+                }
+
+                // Boss Crown
+                if (this.isBoss) {
+                    ctx.fillStyle = 'gold';
+                    ctx.beginPath();
+                    ctx.moveTo(-40, -this.radius + 10);
+                    ctx.lineTo(-20, -this.radius - 30);
+                    ctx.lineTo(0, -this.radius + 10);
+                    ctx.lineTo(20, -this.radius - 30);
+                    ctx.lineTo(40, -this.radius + 10);
+                    ctx.fill();
+                }
+
+                // Small HP bar for normal Tank
+                if (this.type === 'tank' && this.hp < 3) {
+                    ctx.fillStyle = 'red'; ctx.fillRect(-20, -this.radius - 15, 40, 5);
+                    ctx.fillStyle = '#2ecc71'; ctx.fillRect(-20, -this.radius - 15, 40 * (this.hp / 3), 5);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 5 + 2;
+                this.speedX = Math.random() * 6 - 3;
+                this.speedY = Math.random() * 6 - 3;
+                this.color = color;
+                this.life = 1;
+                this.decay = Math.random() * 0.03 + 0.02;
+            }
+            update() {
+                this.x += this.speedX; this.y += this.speedY;
+                this.speedY += 0.2; this.life -= this.decay;
+            }
+            draw(ctx) {
+                ctx.save(); ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+                Math.random() > 0.5 ? ctx.fillRect(this.x, this.y, this.size, this.size) : (ctx.beginPath(), ctx.arc(this.x, this.y, this.size/2, 0, Math.PI*2), ctx.fill());
+                ctx.restore();
+            }
+        }
+
+        /**
+         * GAME LOGIC
+         */
+
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
+        }
+
+        function spawnBoss() {
+            currentState = STATE.BOSS_FIGHT;
+            bossHud.style.display = 'block';
+            // Remove existing normal bears to focus on boss
+            bears.forEach(b => createParticles(b.x, b.y, 10, b.color));
+            bears = [];
+            bears.push(new Bear(level, true));
+        }
+
+        function activatePowerUp(type, x, y) {
+            if (type === 'honey') {
+                timeScale = 0.2; honeyTimer = 300; effectOverlay.style.display = 'block';
+            } else if (type === 'bomb') {
+                ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                bears.forEach(b => { if(!b.isBoss) { b.hp = 0; score += b.points; } else { b.hp -= 10; } });
+            } else if (type === 'heart') {
+                if (lives < 5) { lives++; updateLives(); }
+                createParticles(x, y, 20, '#fd79a8');
+            } else if (type === 'turret') {
+                // Spawn Turret at location
+                turrets.push(new Turret(x, y));
+                createParticles(x, y, 20, '#3498db');
+            }
+        }
+
+        function checkHit(x, y, dmg) {
+            let hit = false;
+
+            // 1. Items
+            for (let i = items.length - 1; i >= 0; i--) {
+                const it = items[i];
+                if (Math.hypot(x - it.x, y - it.y) < it.radius + 10) {
+                    activatePowerUp(it.type, it.x, it.y);
+                    items.splice(i, 1);
+                    return true;
+                }
+            }
+
+            // 2. Bears
+            for (let i = bears.length - 1; i >= 0; i--) {
+                const b = bears[i];
+                const dy = (y - (Math.sin(b.wobble) * 5)) - b.y;
+                if (Math.hypot(x - b.x, dy) < b.radius + 10) {
+                    
+                    b.hp -= dmg; // Use player damage stat
+                    b.hitFlash = 5;
+                    createParticles(x, y, 3, '#ffffff');
+
+                    if (b.hp <= 0) {
+                        killBear(i);
+                    } else {
+                        b.x -= (b.speedX || b.direction) * 5; // Knockback
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function killBear(index) {
+            const b = bears[index];
+            createParticles(b.x, b.y, 15, '#ffffff');
+            createParticles(b.x, b.y, 5, b.color);
+            score += b.points;
+            scoreEl.innerText = score;
+            bears.splice(index, 1);
+
+            if (b.isBoss) {
+                defeatBoss();
+            } else {
+                checkLevelProgression();
+            }
+        }
+
+        function checkLevelProgression() {
+            // If we reach score threshold and not fighting boss yet
+            if (currentState === STATE.PLAYING && score >= scoreThreshold) {
+                spawnBoss();
+            }
+        }
+
+        function defeatBoss() {
+            bossHud.style.display = 'none';
+            showUpgradeScreen();
+        }
+
+        function showUpgradeScreen() {
+            currentState = STATE.UPGRADE;
+            upgradeScreen.classList.remove('hidden');
+            
+            // Generate Cards
+            const upgrades = [
+                {
+                    id: 'armor', icon: '🛡️', title: 'Iron Plot Armor', 
+                    desc: '20% chance to ignore damage when bears escape.',
+                    apply: () => { playerStats.shieldChance += 20; }
+                },
+                {
+                    id: 'damage', icon: '🥊', title: 'Heavy Caliber', 
+                    desc: '+1 Click Damage. Melts Bosses.',
+                    apply: () => { playerStats.damage += 1; }
+                },
+                {
+                    id: 'battery', icon: '🔋', title: 'Battery Pack', 
+                    desc: 'Turrets last 50% longer.',
+                    apply: () => { playerStats.turretDuration = Math.floor(playerStats.turretDuration * 1.5); }
+                }
+            ];
+
+            cardContainer.innerHTML = '';
+            upgrades.forEach(up => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `<div class="card-icon">${up.icon}</div><div class="card-title">${up.title}</div><div class="card-desc">${up.desc}</div>`;
+                div.onclick = () => {
+                    up.apply();
+                    startLevel(level + 1);
+                };
+                cardContainer.appendChild(div);
+            });
+        }
+
+        function startLevel(newLevel) {
+            currentState = STATE.PLAYING;
+            level = newLevel;
+            bears = [];
+            items = [];
+            turrets = [];
+            bullets = [];
+            particles = [];
+            timeScale = 1.0;
+            
+            // Set new threshold for next boss (Current Score + 2000 * Level)
+            scoreThreshold = score + (1500 + (level * 500));
+
+            upgradeScreen.classList.add('hidden');
+            levelEl.innerText = level;
+            levelScreen.classList.remove('hidden');
+            levelTitle.innerText = `STAGE ${level}`;
+            
+            // Messages
+            const messages = ["", "The Awakening", "Sugar Rush", "Tank Parade", "Chaos Theory", "BOSS RUSH"];
+            levelDesc.innerText = messages[Math.min(level-1, messages.length-1)] || "Good Luck!";
+
+            setTimeout(() => {
+                levelScreen.classList.add('hidden');
+                if (currentState !== STATE.GAMEOVER) animationId = requestAnimationFrame(gameLoop);
+            }, 2000);
+        }
+
+        function update() {
+            // Power-up timers
+            if (honeyTimer > 0) {
+                honeyTimer--;
+                if (honeyTimer <= 0) { timeScale = 1.0; effectOverlay.style.display = 'none'; }
+            }
+
+            // Spawning (Only during PLAYING, not Boss Fight)
+            if (currentState === STATE.PLAYING) {
+                spawnTimer++;
+                let spawnRate = Math.max(20, (70 - (level * 8)) / timeScale); 
+                if (spawnTimer > spawnRate) {
+                    bears.push(new Bear(level));
+                    spawnTimer = 0;
+                }
+
+                itemSpawnTimer++;
+                if (itemSpawnTimer > 400) {
+                    if (Math.random() > 0.3) items.push(new GameItem());
+                    itemSpawnTimer = 0;
+                }
+            }
+
+            // Update Entities
+            turrets.forEach((t, i) => {
+                t.update();
+                if(t.life <= 0) turrets.splice(i, 1);
+            });
+
+            bullets.forEach((b, i) => {
+                b.update();
+                if(!b.active) {
+                    bullets.splice(i, 1);
+                } else {
+                    // Check bullet collision with bears
+                    for(let j=bears.length-1; j>=0; j--) {
+                        const bear = bears[j];
+                        if (Math.hypot(b.x - bear.x, b.y - bear.y) < bear.radius) {
+                            bear.hp -= 1; // Turrets do 1 dmg
+                            bear.hitFlash = 5;
+                            createParticles(b.x, b.y, 3, '#f1c40f');
+                            b.active = false;
+                            if(bear.hp <= 0) killBear(j);
+                            break;
+                        }
+                    }
+                }
+            });
+
+            for (let i = bears.length - 1; i >= 0; i--) {
+                const b = bears[i];
+                b.update();
+
+                // Escape logic
+                if (!b.isBoss) {
+                    const escaped = (b.direction === 1 && b.x > canvas.width + b.radius) || 
+                                    (b.direction === -1 && b.x < -b.radius * 2);
+                    if (escaped) {
+                        // Check Shield Stat
+                        const block = Math.random() * 100 < playerStats.shieldChance;
+                        if (!block) {
+                            lives--;
+                            updateLives();
+                        } else {
+                            // Visual indication of block
+                             createParticles(canvas.width/2, canvas.height/2, 10, '#3498db');
+                        }
+                        
+                        bears.splice(i, 1);
+                        if (lives <= 0) endGame();
+                    }
+                }
+            }
+
+            items.forEach((it, i) => {
+                it.update();
+                if (it.x < -100 || it.x > canvas.width + 100) items.splice(i, 1);
+            });
+
+            particles.forEach((p, i) => {
+                p.update();
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Bg Stripes
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            for(let i=0; i<canvas.width; i+=100) ctx.fillRect(i, 0, 50, canvas.height);
+
+            // Entities
+            turrets.forEach(t => t.draw(ctx));
+            bears.forEach(b => b.draw(ctx));
+            items.forEach(it => it.draw(ctx));
+            bullets.forEach(b => b.draw(ctx));
+            particles.forEach(p => p.draw(ctx));
+        }
+
+        function gameLoop() {
+            if (currentState === STATE.GAMEOVER || currentState === STATE.UPGRADE) return;
+            update();
+            draw();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function updateLives() {
+            let hearts = '';
+            for(let i=0; i<lives; i++) hearts += '❤';
+            livesEl.innerText = hearts;
+            document.body.style.backgroundColor = '#c0392b';
+            setTimeout(() => document.body.style.backgroundColor = '#2c3e50', 100);
+        }
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            playerStats = { damage: 1, shieldChance: 0, turretDuration: 600 };
+            scoreEl.innerText = '0';
+            updateLives();
+            
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            // Calc initial threshold
+            startLevel(1);
+        }
+
+        function resetGame() {
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            highScoreEl.innerText = localStorage.getItem('teddy_high_score') || 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            effectOverlay.style.display = 'none';
+            bossHud.style.display = 'none';
+            currentState = STATE.MENU;
+        }
+
+        function endGame() {
+            currentState = STATE.GAMEOVER;
+            cancelAnimationFrame(animationId);
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('teddy_high_score', highScore);
+            }
+            finalScoreEl.innerText = score;
+            gameOverScreen.classList.remove('hidden');
+            effectOverlay.style.display = 'none';
+            bossHud.style.display = 'none';
+        }
+
+    </script>
+</body>
+</html>
